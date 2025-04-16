@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq  # Persist RabbitMQ data
+    ports:
+      - "15672:15672"  # RabbitMQ management UI
+      - "5672:5672"    # RabbitMQ AMQP protocol
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+      RABBITMQ_DEFAULT_EXCHANGE: gps_exchange
+      RABBITMQ_DEFAULT_QUEUE: gps_data
+      RABBITMQ_DEFAULT_ROUTING_KEY: gps_data
+
+    restart: always  # Restart on failure
+  # Define the gps_listener service
+  gps_listener:
+    build: .
+    container_name: gps_listener
+    ports:
+      - "5151:5151"  # Map container port to host
+    restart: always  # Restart on failure
+    depends_on:
+      - rabbitmq  # Ensure RabbitMQ is started before this service
+    environment:
+      RABBITMQ_HOST: rabbitmq  # Hostname of the RabbitMQ service
+      RABBITMQ_PORT: 5672  # Port for RabbitMQ
+      RABBITMQ_USER: user  # RabbitMQ username
+      RABBITMQ_PASSWORD: password  # RabbitMQ password
+      RABBITMQ_QUEUE: gps_data  # Queue name to listen to
+      RABBITMQ_EXCHANGE: gps_exchange  # Exchange name to publish to
+      RABBITMQ_ROUTING_KEY: gps_data  # Routing key for the exchange
