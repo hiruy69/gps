@@ -13,6 +13,7 @@ class RabbitMQClient:
         self.queue_name = os.getenv('RABBITMQ_QUEUE', 'my_queue')
         self.routing_key = os.getenv('RABBITMQ_ROUTING_KEY', 'gps_data')
         self.exchange = os.getenv('RABBITMQ_EXCHANGE', 'gps_exchange')
+        print(f"RabbitMQ Client initialized with queue: {self.queue_name}, routing key: {self.routing_key}, exchange: {self.exchange}")
         self._connect()
 
     def _connect(self):
@@ -41,7 +42,7 @@ class RabbitMQClient:
         body = json.dumps(data)
 
         self.channel.basic_publish(
-            exchange=self.exchange,
+            exchange="",
             routing_key=queue_name,
             body=body,
             properties=pika.BasicProperties(

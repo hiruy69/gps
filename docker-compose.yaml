@@ -4,11 +4,11 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq  # Persist RabbitMQ data
+    # volumes:
+    #   - rabbitmq_data:/var/lib/rabbitmq  # Persist RabbitMQ data
     ports:
-      - "15672:15672"  # RabbitMQ management UI
-      - "5672:5672"    # RabbitMQ AMQP protocol
+      # - "15672:15672"  # RabbitMQ management UI
+      - "5677:5672"    # RabbitMQ AMQP protocol
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password

@@ -6,6 +6,8 @@ WORKDIR /app
 
 # Copy the script
 COPY rabbit_mq_publisher.py .
+COPY requirments.txt .
+RUN pip install --no-cache-dir -r requirments.txt
 COPY gps.py .
 
 # Expose the TCP listening port

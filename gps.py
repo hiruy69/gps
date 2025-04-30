@@ -7,32 +7,7 @@ import decimal
 from rabbit_mq_publisher import RabbitMQClient
 HOST = '0.0.0.0'
 PORT = 5151
-rabbit_mq_client = RabbitMQClient()
 
-def input_trigger(): #triggers user input         
-	pass
-	# print("Paste full 'Codec 8' packet to parse it or:")
-	# print("Type SERVER to start the server or:")
-	# print("Type EXIT to stop the program")
-	# device_imei = "default_IMEI"
-	# user_input = input("waiting for input: ")
-	# if user_input.upper() == "EXIT":
-	# 	print(f"exiting program............")
-	# 	exit()	
-
-	# elif user_input.upper() == "SERVER":
-	# 	start_server_trigger()
-	# else:		
-	# 	try:
-	# 		if codec_8e_checker(user_input.replace(" ","")) == False:
-	# 			print("Wrong input or invalid Codec8 packet")
-	# 			print()
-	# 			input_trigger()
-	# 		else:
-	# 			codec_parser_trigger(user_input, device_imei, "USER")
-	# 	except Exception as e:
-	# 		print(f"error occured: {e} enter proper Codec8 packet or EXIT!!!")
-	# 		input_trigger()		
 
 ####################################################
 ###############__CRC16/ARC Checker__################
@@ -77,7 +52,6 @@ def codec_parser_trigger(codec8_packet, device_imei, props):
 
 		except Exception as e:
 			print(f"Error occured: {e} enter proper Codec8 packet or EXIT!!!")
-			input_trigger()
 
 def imei_checker(hex_imei): #IMEI checker function
 	imei_length = int(hex_imei[:4], 16)
@@ -142,20 +116,16 @@ def start_server_trigger():
 ####################################################
 
 def codec_8e_parser(codec_8E_packet, device_imei, props): #think a lot before modifying  this function
-	print()
-#	print (str("codec 8 string entered - " + codec_8E_packet))
 
 	io_dict_raw = {}
-#	timestamp = codec_8E_packet[20:36]	
 	io_dict_raw["device_IMEI"] = device_imei
 	io_dict_raw["server_time"] = time_stamper_for_json()
-#	io_dict_raw["_timestamp_"] = device_time_stamper(timestamp)
-#	io_dict_raw["_rec_delay_"] = record_delay_counter(timestamp)
 	io_dict_raw["data_length"] = "Record length: " + str(int(len(codec_8E_packet))) + " characters" + " // " + str(int(len(codec_8E_packet) // 2)) + " bytes"
 	io_dict_raw["_raw_data__"] = codec_8E_packet
 
 	try: #writing raw DATA dictionary to ./data/data.json
-		json_printer_rawDATA(io_dict_raw, device_imei)
+		# json_printer_rawDATA(io_dict_raw, device_imei)
+		print(f"raw data = {codec_8E_packet}")
 	except Exception as e:
 		print(f"JSON raw data writing error occured = {e}")
 
@@ -200,15 +170,11 @@ def codec_8e_parser(codec_8E_packet, device_imei, props): #think a lot before mo
 		data_field_position += len(priority)
 
 		longitude = avl_data_start[data_field_position:data_field_position+8]
-	#	io_dict["longitude"] = struct.unpack('>i', bytes.fromhex(longitude))[0]
-	#	print (f"longitude = {struct.unpack('>i', bytes.fromhex(longitude))[0]}")
 		io_dict["longitude"] = coordinate_formater(longitude)
 		print (f"longitude = {coordinate_formater(longitude)}")
 		data_field_position += len(longitude)
 
 		latitude = avl_data_start[data_field_position:data_field_position+8]
-	#	print (f"latitude = {struct.unpack('>i', bytes.fromhex(latitude))[0]}")
-	#	io_dict["latitude"] = struct.unpack('>i', bytes.fromhex(latitude))[0]
 		io_dict["latitude"] = coordinate_formater(latitude)
 		print (f"latitude = {coordinate_formater(latitude)}")
 		data_field_position += len(latitude)
@@ -356,17 +322,13 @@ def codec_8e_parser(codec_8E_packet, device_imei, props): #think a lot before mo
 	if props == "SERVER":	
 
 		total_records_parsed = int(avl_data_start[data_field_position:data_field_position+2], 16)
-		print()
 		print(f"total parsed records = {total_records_parsed}")
-		print()
 		return int(number_of_records)
 	
 	else:
 		total_records_parsed = int(avl_data_start[data_field_position:data_field_position+2], 16)
-		print()
 		print(f"total parsed records = {total_records_parsed}")
-		print()
-		input_trigger()
+
 
 ####################################################
 ###############_End_of_MAIN_Parser_Code#############
@@ -392,24 +354,10 @@ def coordinate_formater(hex_coordinate): # Fixed :), hopefuly this works for you
 ####################################################
 
 def json_printer(io_dict, device_imei): #function to write JSON file with data
-    json_data = json.dumps(io_dict, indent=4)
-    print(device_imei,"---device_imei---")
-    rabbit_mq_client.send(json_data)
-    # data_path = "./data/" + str(device_imei)
-    # json_file = str(device_imei) + "_data.json"
-
-    # if not os.path.exists(data_path):
-    #     os.makedirs(data_path)
-    # else:
-    #     pass
-
-    # if not os.path.exists(os.path.join(data_path, json_file)):
-    #     with open(os.path.join(data_path, json_file), "w") as file:
-    #         file.write(json_data)
-    # else:
-    #     with open(os.path.join(data_path, json_file), "a") as file:
-    #         file.write(json_data)
-    # return
+	json_data = json.dumps(io_dict, indent=4)
+	rabbit_mq_client = RabbitMQClient()
+	rabbit_mq_client.send(json_data, queue_name="gps_data")
+	# print(f"json data = {json_data}")
 
 def json_printer_rawDATA(io_dict_raw, device_imei): #function to write JSON file with data
 #	print (io_dict_raw)
@@ -447,13 +395,7 @@ def time_stamper_for_json():
 def device_time_stamper(timestamp):
 	timestamp_ms = int(timestamp, 16) / 1000
 	timestamp_utc = datetime.datetime.fromtimestamp(timestamp_ms, datetime.timezone.utc)
-	utc_offset = datetime.datetime.fromtimestamp(timestamp_ms) - datetime.datetime.fromtimestamp(timestamp_ms, datetime.timezone.utc)
-	timestamp_local = timestamp_utc + utc_offset
-	formatted_timestamp_local = timestamp_local.strftime("%H:%M:%S %d-%m-%Y")
-	formatted_timestamp_utc = timestamp_utc.strftime("%H:%M:%S %d-%m-%Y")
-	formatted_timestamp = f"{formatted_timestamp_local} (local) / {formatted_timestamp_utc} (utc)"
-
-	return formatted_timestamp
+	return str(timestamp_utc)
 
 def record_delay_counter(timestamp):
 	timestamp_ms = int(timestamp, 16) / 1000
@@ -530,30 +472,21 @@ def sorting_hat(key, value):
 
 ####################################################
 
-def fileAccessTest(): #check if script can create files and folders
-	try: 
-		testDict = {}
-		testDict["_Writing_Test_"] = "Writing_Test"
-		testDict["Script_Started"] = time_stamper_for_json()
-
-		json_printer(testDict, "file_Write_Test")
-
-		print (f"---### File access test passed! ###---")
-		# input_trigger()
-		start_server_trigger()
-
-	except Exception as e:
-		print ()
-		print (f"---### File access error occured ###---")
-		print (f"'{e}'")
-		print (f"---### Try running terminal with Administrator rights! ###---")
-		print (f"---### Nothing will be saved if you decide to continue! ###---")
-		print ()
-		input_trigger()
-
-
+import time
 def main():
-	fileAccessTest()
+	user_input = "00000000000004a98e0e000001963a2d52b800171c66b2055ede46092300420a002e0000000c000500ef0100f00100150400c800004501000500b5000c00b60008004236690043102300440000000200f10000f87100100000a21700000000000001963a2d664000171c7d7b055ee8f4092500420800390000000c000500ef0100f00100150500c800004501000500b5001000b6000e004236780043102400440000000200f10000f87100100000a25e00000000000001963a2d819800171c9d0f055f00e9092300300600390000000c000500ef0100f00100150500c800004501000500b5001300b60010004236640043102300440000000200f10000f87100100000a2d600000000000001963a2d896800171ca32e055f05240922003706002a0000000c000500ef0100f00100150500c800004501000500b5001300b600110042366f0043102300440000000200f10000f87100100000a2ec00000000000001963a2da4c000171cb961055f0d260924003d09001f0000000c000500ef0100f00100150500c800004501000500b5000f00b6000c0042366e0043102300440000000200f10000f87100100000a32e00000000000001963a2dcfb800171cdccc055f1b150927003f1000270000000c000500ef0100f00100150500c800004501000500b5000900b60006004236720043102300440000000200f10000f87100100000a39a00000000000001963a2deef800171cf6f7055f27a60922003e0e001d0000000c000500ef0100f00100150400c800004501000500b5000a00b60006004236700043102300440000000200f10000f87100100000a3ec00000000000001963a2dfe9800171cff1b055f2c340923003e0e00120000000c000500ef0100f00100150400c800004501000500b5000d00b60006004236780043102300440000000200f10000f87100100000a40600000000000001963a2e4cb800171d1f02055f3d110929003e0f00130000000c000500ef0100f00100150400c800004501000500b5000c00b60006004236700043102300440000000200f10000f87100100000a46c00000000000001963a2eae6000171d3fb0055f4dbc0935003c10000e0000000c000500ef0100f00100150500c800004501000500b5000c00b60006004236750043102300440000000200f10000f87100100000a4d300000000000001963a2ec9b800171d4c30055f54a20935003d0f00180000000c000500ef0100f00100150500c800004501000500b5000c00b60006004236810043102300440000000200f10000f87100100000a4fc00000000000001963a2efc8000171d6d96055f655e0939003f0f001e0000000c000500ef0100f00100150500c800004501000500b5000900b600060042367b0043102300440000000200f10000f87100100000a56500000000000001963a2f277800171d8eba055f72f9093900470e001f0000000c000500ef0100f00100150500c800004501000500b5000d00b60007004236810043102300440000000200f10000f87100100000a5ca00000000000001963a2f3ee800171d9db3055f781d093c004b0d00130000000c000500ef0100f00100150500c800004501000500b5000a00b60007004236760043102400440000000200f10000f87100100000a5f7000000000e00006178"
+	device_imei = "default_IMEI"
+	while True:
+		time.sleep(15)
+		try:
+			if codec_8e_checker(user_input.replace(" ","")) == False:
+				print("Wrong input or invalid Codec8 packet")
+				print()
+			else:
+				codec_parser_trigger(user_input, device_imei, "USER")
+		except Exception as e:
+			print(f"error occured: {e} enter proper Codec8 packet or EXIT!!!")
 
 if __name__ == "__main__":
-	main()
+    start_server_trigger()
+	# main()
